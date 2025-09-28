@@ -25,9 +25,14 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "Content Management System API documentation",
     },
-    servers: [
-      { url: "http://localhost:5000" } // change if using production
-    ],
+servers: [
+  {
+    url: process.env.NODE_ENV === "production"
+      ? "https://cms-roan-two.vercel.app"
+      : "http://localhost:5000"
+  }
+],
+
     components: {
       securitySchemes: {
         bearerAuth: {
