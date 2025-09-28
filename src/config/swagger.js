@@ -1,34 +1,58 @@
+// src/swagger.js
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
-// Dynamically pick correct server URL
-const serverUrl =
-  process.env.NODE_ENV === "production"
-    ? `https://${process.env.VERCEL_URL}/api`
-    : "http://localhost:5000/api";
+class Swagger {
+  constructor(app) {
+    if (!app) throw new Error("Express app instance is required");
+    this.app = app;
+    this.init();
+  }
 
+  // Determine server URL based on environment
+  getServerUrl() {
+    if (process.env.NODE_ENV === "production") {
+      // Vercel automatically sets process.env.VERCEL_URL
+      return process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}/api`
+        : "https://your-production-domain/api"; // fallback
+    }
+    return "http://localhost:5000/api"; // local development
+  }
 
-const options = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "CMS API",
-      version: "1.0.0",
-      description: "API documentation for your CMS project",
-    },
-    servers: [
-      {
-        url: serverUrl,
+  // Initialize Swagger
+  init() {
+    const options = {
+      definition: {
+        openapi: "3.0.0",
+        info: {
+          title: "CMS API",
+          version: "1.0.0",
+          description: "API documentation for the CMS project",
+        },
+        servers: [
+          {
+            url: this.getServerUrl(),
+          },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+            },
+          },
+        },
       },
-    ],
-  },
-  apis: ["./src/routes/*.js"], // Adjust path depending on project structure
-};
+      apis: ["./src/routes/*.js"], // path to your route files for annotations
+    };
 
-const specs = swaggerJsdoc(options);
+    const specs = swaggerJsdoc(options);
 
-const swaggerDocs = (app) => {
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
-};
+    // Serve Swagger UI at /api-docs
+    this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
+  }
+}
 
-module.exports = swaggerDocs;
+module.exports = Swagger;

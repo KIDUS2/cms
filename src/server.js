@@ -17,6 +17,13 @@ app.use(express.urlencoded({ extended: true }));
 // -------------------------
 // Swagger setup
 // -------------------------
+const serverUrl =
+  process.env.NODE_ENV === "production"
+    ? process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api`
+      : "https://your-production-domain/api"
+    : "http://localhost:5000/api";
+
 const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
@@ -25,11 +32,11 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "Content Management System API documentation",
     },
-servers: [
-  {
-    url: "/api", // relative, works regardless of domain
-  },
-],
+    servers: [
+      {
+        url: serverUrl,
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -42,10 +49,9 @@ servers: [
   },
   apis: ["./src/routes/*.js"], // all routes for Swagger
 };
+
 const swaggerSpec = swaggerJsDoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // -------------------------
 // MongoDB connection
