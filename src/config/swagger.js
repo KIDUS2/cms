@@ -1,6 +1,12 @@
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
+// Choose server URL dynamically
+const serverUrl =
+  process.env.NODE_ENV === "production"
+    ? process.env.PROD_URL || "https://cms-7hralkrc2-kidus2s-projects.vercel.app/api"
+    : "http://localhost:5000/api";
+
 const options = {
   definition: {
     openapi: "3.0.0",
@@ -11,7 +17,7 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:5000/api", // change to your production URL when deploying
+        url: serverUrl,
       },
     ],
   },
