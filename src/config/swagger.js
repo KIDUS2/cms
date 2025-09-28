@@ -1,3 +1,4 @@
+// src/swagger.js
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const path = require("path");
@@ -22,13 +23,16 @@ class Swagger {
   // Get correct API file paths for Swagger
   getApiPaths() {
     // Try multiple paths for different environments
-    return [
+    const paths = [
       path.join(__dirname, "routes/*.js"),
       path.join(process.cwd(), "src/routes/*.js"),
       path.join(process.cwd(), "routes/*.js"),
       "./src/routes/*.js",
       "./routes/*.js"
     ];
+    
+    console.log("Looking for API files in:", paths);
+    return paths;
   }
 
   // Initialize Swagger
@@ -44,6 +48,7 @@ class Swagger {
         servers: [
           {
             url: this.getServerUrl(),
+            description: process.env.NODE_ENV === "production" ? "Production server" : "Development server"
           },
         ],
         components: {
@@ -62,22 +67,36 @@ class Swagger {
     try {
       const specs = swaggerJsdoc(options);
       
-      // Swagger UI options with CDN
+      // Log successful spec generation
+      console.log("Swagger spec generated successfully");
+      console.log("Paths found:", Object.keys(specs.paths || {}));
+      
+      // Swagger UI options
       const swaggerOptions = {
         explorer: true,
         customCss: '.swagger-ui .topbar { display: none }',
         swaggerOptions: {
           persistAuthorization: true,
+          tryItOutEnabled: true,
         },
         customSiteTitle: "CMS API Documentation",
       };
 
-      // Serve Swagger UI with CDN assets
+      // Serve Swagger UI
       this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
       
-      console.log("Swagger documentation initialized successfully");
+      // Add a test endpoint to verify Swagger spec
+      this.app.get("/api/swagger-spec", (req, res) => {
+        res.json({
+          success: true,
+          paths: Object.keys(specs.paths || {}),
+          components: Object.keys(specs.components || {})
+        });
+      });
+      
+      console.log("✅ Swagger UI available at /api-docs");
     } catch (error) {
-      console.error("Swagger initialization error:", error);
+      console.error("❌ Swagger initialization error:", error);
     }
   }
 }

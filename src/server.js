@@ -2,8 +2,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const swaggerUi = require("swagger-ui-express");
-const swaggerJsDoc = require("swagger-jsdoc");
 
 // Load environment variables
 dotenv.config();
@@ -15,43 +13,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // -------------------------
-// Swagger setup
+// Swagger setup - Use the Swagger class
 // -------------------------
-const serverUrl =
-  process.env.NODE_ENV === "production"
-    ? process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}/api`
-      : "https://your-production-domain/api"
-    : "http://localhost:5000/api";
-
-const swaggerOptions = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "CMS API",
-      version: "1.0.0",
-      description: "Content Management System API documentation",
-    },
-    servers: [
-      {
-        url: serverUrl,
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-  },
-  apis: ["./src/routes/*.js"], // all routes for Swagger
-};
-
-const swaggerSpec = swaggerJsDoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const Swagger = require("./config/swagger");
+new Swagger(app); // This initializes Swagger with your app
 
 // -------------------------
 // MongoDB connection
@@ -82,6 +47,17 @@ app.get("/", (req, res) => {
 });
 
 // -------------------------
+// Health check for Vercel
+// -------------------------
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "OK", 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV 
+  });
+});
+
+// -------------------------
 // 404 Handler
 // -------------------------
 app.use((req, res) => {
@@ -89,12 +65,15 @@ app.use((req, res) => {
 });
 
 // -------------------------
-// Start server
+// Start server (local only)
 // -------------------------
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== "production") {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Swagger docs available at http://localhost:${PORT}/api-docs`);
+  });
 }
 
-// Export for serverless (Vercel, etc.)
+// Export for serverless (Vercel)
 module.exports = app;
