@@ -1,11 +1,12 @@
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
-// Choose server URL dynamically
+// Dynamically pick correct server URL
 const serverUrl =
   process.env.NODE_ENV === "production"
-    ? process.env.PROD_URL || "https://cms-7hralkrc2-kidus2s-projects.vercel.app/api"
+    ? `https://${process.env.VERCEL_URL}/api`
     : "http://localhost:5000/api";
+
 
 const options = {
   definition: {
@@ -21,7 +22,7 @@ const options = {
       },
     ],
   },
-  apis: ["./src/routes/*.js"], // Path to your route files for Swagger annotations
+  apis: ["./src/routes/*.js"], // Adjust path depending on project structure
 };
 
 const specs = swaggerJsdoc(options);

@@ -25,14 +25,11 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "Content Management System API documentation",
     },
-    servers: [
-      {
-        url:
-          process.env.NODE_ENV === "production"
-            ? "https://cms-7hralkrc2-kidus2s-projects.vercel.app"
-            : "http://localhost:5000",
-      },
-    ],
+servers: [
+  {
+    url: "/api", // relative, works regardless of domain
+  },
+],
     components: {
       securitySchemes: {
         bearerAuth: {
