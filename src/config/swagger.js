@@ -1,6 +1,6 @@
-// src/swagger.js
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const path = require("path");
 
 class Swagger {
   constructor(app) {
@@ -12,12 +12,25 @@ class Swagger {
   // Determine server URL based on environment
   getServerUrl() {
     if (process.env.NODE_ENV === "production") {
-      // Vercel automatically sets process.env.VERCEL_URL
       return process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}/api`
-        : "https://your-production-domain/api"; // fallback
+        : "https://your-production-domain/api";
     }
-    return "http://localhost:5000/api"; // local development
+    return "http://localhost:5000/api";
+  }
+
+  // Get correct API file paths for Swagger
+  getApiPaths() {
+    // For Vercel deployment
+    if (process.env.NODE_ENV === "production") {
+      return [
+        path.join(__dirname, "routes/*.js"),
+        path.join(process.cwd(), "src/routes/*.js"),
+        "./routes/*.js"
+      ];
+    }
+    // For local development
+    return ["./src/routes/*.js"];
   }
 
   // Initialize Swagger
@@ -45,13 +58,22 @@ class Swagger {
           },
         },
       },
-      apis: ["./src/routes/*.js"], // path to your route files for annotations
+      apis: this.getApiPaths(), // Use dynamic paths
     };
 
-    const specs = swaggerJsdoc(options);
-
-    // Serve Swagger UI at /api-docs
-    this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
+    try {
+      const specs = swaggerJsdoc(options);
+      
+      // Serve Swagger UI at /api-docs
+      this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, {
+        explorer: true,
+        customCss: '.swagger-ui .topbar { display: none }',
+      }));
+      
+      console.log("Swagger documentation initialized successfully");
+    } catch (error) {
+      console.error("Swagger initialization error:", error);
+    }
   }
 }
 
