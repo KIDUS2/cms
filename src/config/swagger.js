@@ -1,4 +1,3 @@
-// src/swagger.js
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const path = require("path");
@@ -22,17 +21,11 @@ class Swagger {
 
   // Get correct API file paths for Swagger
   getApiPaths() {
-    // Try multiple paths for different environments
-    const paths = [
+    return [
       path.join(__dirname, "routes/*.js"),
       path.join(process.cwd(), "src/routes/*.js"),
-      path.join(process.cwd(), "routes/*.js"),
       "./src/routes/*.js",
-      "./routes/*.js"
     ];
-    
-    console.log("Looking for API files in:", paths);
-    return paths;
   }
 
   // Initialize Swagger
@@ -67,32 +60,27 @@ class Swagger {
     try {
       const specs = swaggerJsdoc(options);
       
-      // Log successful spec generation
-      console.log("Swagger spec generated successfully");
-      console.log("Paths found:", Object.keys(specs.paths || {}));
-      
-      // Swagger UI options
+      // Custom Swagger UI configuration with CDN
       const swaggerOptions = {
         explorer: true,
         customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: "CMS API Documentation",
         swaggerOptions: {
           persistAuthorization: true,
-          tryItOutEnabled: true,
+          docExpansion: 'none',
+          filter: true,
         },
-        customSiteTitle: "CMS API Documentation",
+        customJs: [
+          'https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js',
+          'https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js'
+        ],
+        customCssUrl: [
+          'https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css'
+        ]
       };
 
       // Serve Swagger UI
       this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
-      
-      // Add a test endpoint to verify Swagger spec
-      this.app.get("/api/swagger-spec", (req, res) => {
-        res.json({
-          success: true,
-          paths: Object.keys(specs.paths || {}),
-          components: Object.keys(specs.components || {})
-        });
-      });
       
       console.log("✅ Swagger UI available at /api-docs");
     } catch (error) {
