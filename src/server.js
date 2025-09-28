@@ -1,34 +1,93 @@
+// src/server.js
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const userRoutes = require("./routes/userRoutes");
-const postRoutes = require("./routes/postRoutes");
+const swaggerUi = require("swagger-ui-express");
+const swaggerJsDoc = require("swagger-jsdoc");
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
-app.use(express.json());
 
-// ✅ Root route for Vercel check
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// -------------------------
+// Swagger setup
+// -------------------------
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "CMS API",
+      version: "1.0.0",
+      description: "Content Management System API documentation",
+    },
+    servers: [
+      { url: "http://localhost:5000" } // change if using production
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+  },
+  apis: ["./src/routes/*.js"], // all routes for Swagger
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// -------------------------
+// MongoDB connection
+// -------------------------
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.error("MongoDB connection error:", err));
+
+// -------------------------
+// Routes
+// -------------------------
+app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/posts", require("./routes/postRoutes"));
+app.use("/api/about", require("./routes/aboutRoutes"));
+app.use("/api/services", require("./routes/serviceRoutes"));
+app.use("/api/products", require("./routes/productRoutes"));
+app.use("/api/insights", require("./routes/insightRoutes"));
+app.use("/api/cards", require("./routes/cardRoutes"));
+app.use("/api/contacts", require("./routes/contactRoutes"));
+app.use("/api/comments", require("./routes/commentRoutes"));
+
+// -------------------------
+// Root
+// -------------------------
 app.get("/", (req, res) => {
-  res.send("🚀 CMS API is running on Vercel!");
+  res.send("🚀 CMS API is running!");
 });
 
-// Connect DB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+// -------------------------
+// 404 Handler
+// -------------------------
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
-// Routes
-app.use("/api/users", userRoutes);
-app.use("/api/posts", postRoutes);
-
+// -------------------------
+// Start server
+// -------------------------
 const PORT = process.env.PORT || 5000;
-
-// ✅ Only listen locally, not on Vercel
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
-// ✅ Export app for Vercel serverless functions
+// Export for serverless (Vercel, etc.)
 module.exports = app;

@@ -1,60 +1,100 @@
 const express = require("express");
-const Post = require("../models/Post");
-const { auth, permit } = require("../middleware/auth");
+const { auth, permit } = require("../middleware/authMiddleware");
+const { getPosts, createPost, updatePost, deletePost } = require("../controllers/postController");
 const router = express.Router();
 
-// Create Post
-router.post("/", auth, async (req, res) => {
-  try {
-    const { title, content, categories, tags, status, image } = req.body;
-    const slug = title.toLowerCase().replace(/\s+/g, "-");
-    const post = new Post({ title, slug, content, categories, tags, status, image, author: req.user._id });
-    await post.save();
-    res.status(201).json({ message: "Post created", post });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+/**
+ * @swagger
+ * /api/posts:
+ *   get:
+ *     summary: Get all published posts (public)
+ *     tags: [Posts]
+ *     responses:
+ *       200:
+ *         description: List of posts
+ */
+router.get("/", getPosts);
 
-router.get("/", async (req, res) => {
-  const { q, category, tag, author } = req.query;
+/**
+ * @swagger
+ * /api/posts/{id}:
+ *   get:
+ *     summary: Get post by ID (public)
+ *     tags: [Posts]
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Post data
+ */
 
-  let filter = { status: "published" };
+router.post("/", auth, createPost);
 
-  if (q) filter.$or = [
-    { title: { $regex: q, $options: "i" } },
-    { content: { $regex: q, $options: "i" } }
-  ];
+/**
+ * @swagger
+ * /api/posts/{id}:
+ *   put:
+ *     summary: Update a post (authenticated)
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *               categories:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               status:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Post updated
+ */
+router.put("/:id", auth, updatePost);
 
-  if (category) filter.categories = category;
-  if (tag) filter.tags = tag;
-  if (author) filter.author = author;
-
-  const posts = await Post.find(filter).populate("author", "username role");
-  res.json(posts);
-});
-
-
-// Get single post
-router.get("/:id", async (req, res) => {
-  const post = await Post.findById(req.params.id).populate("author", "username role");
-  if (!post) return res.status(404).json({ message: "Post not found" });
-  res.json(post);
-});
-
-// Update post
-router.put("/:id", auth, async (req, res) => {
-  const { title, content, categories, tags, status, image } = req.body;
-  const post = await Post.findByIdAndUpdate(req.params.id, { title, content, categories, tags, status, image }, { new: true });
-  if (!post) return res.status(404).json({ message: "Post not found" });
-  res.json({ message: "Post updated", post });
-});
-
-// Delete post (admin only)
-router.delete("/:id", auth, permit, async (req, res) => {
-  const post = await Post.findByIdAndDelete(req.params.id);
-  if (!post) return res.status(404).json({ message: "Post not found" });
-  res.json({ message: "Post deleted" });
-});
+/**
+ * @swagger
+ * /api/posts/{id}:
+ *   delete:
+ *     summary: Delete a post (admin only)
+ *     tags: [Posts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Post deleted
+ */
+router.delete("/:id", auth, permit("admin"), deletePost);
 
 module.exports = router;

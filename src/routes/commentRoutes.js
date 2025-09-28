@@ -1,27 +1,63 @@
 const express = require("express");
-const Comment = require("../models/Comment");
-const { auth, permit } = require("../middleware/auth");
-
+const { auth, permit } = require("../middleware/authMiddleware");
+const { createComment, getComments, deleteComment } = require("../controllers/commentController");
 const router = express.Router();
 
-// Add comment
-router.post("/", auth, async (req, res) => {
-  const { postId, content } = req.body;
-  const comment = new Comment({ post: postId, content, user: req.user._id });
-  await comment.save();
-  res.json({ message: "Comment submitted", comment });
-});
+/**
+ * @swagger
+ * /api/comments:
+ *   get:
+ *     summary: Get all comments (public)
+ *     tags: [Comments]
+ *     responses:
+ *       200:
+ *         description: List of comments
+ */
+router.get("/", getComments);
 
-// Approve comment (admin)
-router.put("/:id/approve", auth, permit("admin"), async (req, res) => {
-  const comment = await Comment.findByIdAndUpdate(req.params.id, { approved: true }, { new: true });
-  res.json({ message: "Comment approved", comment });
-});
+/**
+ * @swagger
+ * /api/comments:
+ *   post:
+ *     summary: Create a comment (authenticated)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               postId:
+ *                 type: string
+ *               content:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Comment created
+ */
+router.post("/", auth, createComment);
 
-// Get comments for post
-router.get("/post/:postId", async (req, res) => {
-  const comments = await Comment.find({ post: req.params.postId, approved: true }).populate("user", "username");
-  res.json(comments);
-});
+/**
+ * @swagger
+ * /api/comments/{id}:
+ *   delete:
+ *     summary: Delete a comment (admin only)
+ *     tags: [Comments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Comment deleted
+ */
+router.delete("/:id", auth, permit("admin"), deleteComment);
 
 module.exports = router;
