@@ -21,16 +21,14 @@ class Swagger {
 
   // Get correct API file paths for Swagger
   getApiPaths() {
-    // For Vercel deployment
-    if (process.env.NODE_ENV === "production") {
-      return [
-        path.join(__dirname, "routes/*.js"),
-        path.join(process.cwd(), "src/routes/*.js"),
-        "./routes/*.js"
-      ];
-    }
-    // For local development
-    return ["./src/routes/*.js"];
+    // Try multiple paths for different environments
+    return [
+      path.join(__dirname, "routes/*.js"),
+      path.join(process.cwd(), "src/routes/*.js"),
+      path.join(process.cwd(), "routes/*.js"),
+      "./src/routes/*.js",
+      "./routes/*.js"
+    ];
   }
 
   // Initialize Swagger
@@ -58,17 +56,24 @@ class Swagger {
           },
         },
       },
-      apis: this.getApiPaths(), // Use dynamic paths
+      apis: this.getApiPaths(),
     };
 
     try {
       const specs = swaggerJsdoc(options);
       
-      // Serve Swagger UI at /api-docs
-      this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, {
+      // Swagger UI options with CDN
+      const swaggerOptions = {
         explorer: true,
         customCss: '.swagger-ui .topbar { display: none }',
-      }));
+        swaggerOptions: {
+          persistAuthorization: true,
+        },
+        customSiteTitle: "CMS API Documentation",
+      };
+
+      // Serve Swagger UI with CDN assets
+      this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
       
       console.log("Swagger documentation initialized successfully");
     } catch (error) {
