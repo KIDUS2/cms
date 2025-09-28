@@ -25,14 +25,14 @@ const swaggerOptions = {
       version: "1.0.0",
       description: "Content Management System API documentation",
     },
-servers: [
-  {
-    url: process.env.NODE_ENV === "production"
-      ? "https://cms-roan-two.vercel.app"
-      : "http://localhost:5000"
-  }
-],
-
+    servers: [
+      {
+        url:
+          process.env.NODE_ENV === "production"
+            ? "https://cms-7hralkrc2-kidus2s-projects.vercel.app"
+            : "http://localhost:5000",
+      },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -52,12 +52,10 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 // -------------------------
 // MongoDB connection
 // -------------------------
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.error("MongoDB connection error:", err));
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 // -------------------------
 // Routes
