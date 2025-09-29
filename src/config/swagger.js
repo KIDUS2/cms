@@ -57,32 +57,31 @@ class Swagger {
       apis: this.getApiPaths(),
     };
 
-    try {
+     try {
       const specs = swaggerJsdoc(options);
       
-      // Custom Swagger UI configuration with CDN
+      // Swagger UI options
       const swaggerOptions = {
         explorer: true,
-        customCss: '.swagger-ui .topbar { display: none }',
-        customSiteTitle: "CMS API Documentation",
+        customCss: `
+          .swagger-ui .topbar { display: none }
+          .swagger-ui .info .title { color: #2563eb }
+          .swagger-ui .btn.authorize { background-color: #2563eb }
+        `,
+        customSiteTitle: "Upeosoft CMS API Documentation",
         swaggerOptions: {
           persistAuthorization: true,
-          docExpansion: 'none',
+          docExpansion: "none",
           filter: true,
         },
-        customJs: [
-          'https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js',
-          'https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js'
-        ],
-        customCssUrl: [
-          'https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css'
-        ]
       };
 
       // Serve Swagger UI
       this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
       
       console.log("✅ Swagger UI available at /api-docs");
+      console.log(`📚 Documentation: http://localhost:${process.env.PORT || 5000}/api-docs`);
+      
     } catch (error) {
       console.error("❌ Swagger initialization error:", error);
     }
