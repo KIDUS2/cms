@@ -1,25 +1,66 @@
+// routes/productRoutes.js
 const express = require("express");
+const {
+  getProducts,
+  getProductBySlug,
+  getFeaturedProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct
+} = require("../controllers/productController");
 const { auth, permit } = require("../middleware/authMiddleware");
-const { getProducts, createProduct, updateProduct, deleteProduct } = require("../controllers/productController");
+
 const router = express.Router();
 
 /**
  * @swagger
  * /api/products:
  *   get:
- *     summary: Get all products (public)
+ *     summary: Get all active products
  *     tags: [Products]
  *     responses:
  *       200:
- *         description: List of products
+ *         description: Products retrieved successfully
  */
 router.get("/", getProducts);
 
 /**
  * @swagger
+ * /api/products/featured:
+ *   get:
+ *     summary: Get featured products
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Featured products retrieved successfully
+ */
+router.get("/featured", getFeaturedProducts);
+
+/**
+ * @swagger
+ * /api/products/{slug}:
+ *   get:
+ *     summary: Get product by slug
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Product retrieved successfully
+ *       404:
+ *         description: Product not found
+ */
+router.get("/:slug", getProductBySlug);
+
+/**
+ * @swagger
  * /api/products:
  *   post:
- *     summary: Create a product (admin only)
+ *     summary: Create a new product (admin only)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -29,18 +70,24 @@ router.get("/", getProducts);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - slug
+ *               - description
+ *               - category
  *             properties:
  *               name:
  *                 type: string
+ *               slug:
+ *                 type: string
  *               description:
  *                 type: string
- *               price:
- *                 type: number
- *               image:
+ *               category:
  *                 type: string
+ *                 enum: [software, mobile-app, web-app, custom-solution]
  *     responses:
  *       201:
- *         description: Product created
+ *         description: Product created successfully
  */
 router.post("/", auth, permit("admin"), createProduct);
 
@@ -53,8 +100,8 @@ router.post("/", auth, permit("admin"), createProduct);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -69,13 +116,11 @@ router.post("/", auth, permit("admin"), createProduct);
  *                 type: string
  *               description:
  *                 type: string
- *               price:
- *                 type: number
- *               image:
- *                 type: string
+ *               isFeatured:
+ *                 type: boolean
  *     responses:
  *       200:
- *         description: Product updated
+ *         description: Product updated successfully
  */
 router.put("/:id", auth, permit("admin"), updateProduct);
 
@@ -88,14 +133,14 @@ router.put("/:id", auth, permit("admin"), updateProduct);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Product deleted
+ *         description: Product deleted successfully
  */
 router.delete("/:id", auth, permit("admin"), deleteProduct);
 

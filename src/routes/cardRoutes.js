@@ -1,17 +1,30 @@
+// routes/cardRoutes.js
 const express = require("express");
+const {
+  getCards,
+  createCard,
+  updateCard,
+  deleteCard
+} = require("../controllers/cardController");
 const { auth, permit } = require("../middleware/authMiddleware");
-const { getCards, createCard, updateCard, deleteCard } = require("../controllers/cardController");
+
 const router = express.Router();
 
 /**
  * @swagger
  * /api/cards:
  *   get:
- *     summary: Get all cards (public)
+ *     summary: Get all active cards
  *     tags: [Cards]
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter by card type
  *     responses:
  *       200:
- *         description: List of cards
+ *         description: Cards retrieved successfully
  */
 router.get("/", getCards);
 
@@ -19,7 +32,7 @@ router.get("/", getCards);
  * @swagger
  * /api/cards:
  *   post:
- *     summary: Create a card (admin only)
+ *     summary: Create a new card (admin only)
  *     tags: [Cards]
  *     security:
  *       - bearerAuth: []
@@ -29,16 +42,25 @@ router.get("/", getCards);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - type
  *             properties:
  *               title:
  *                 type: string
  *               description:
  *                 type: string
+ *               type:
+ *                 type: string
+ *                 enum: [service, feature, team, technology, testimonial, project]
+ *               icon:
+ *                 type: string
  *               image:
  *                 type: string
  *     responses:
  *       201:
- *         description: Card created
+ *         description: Card created successfully
  */
 router.post("/", auth, permit("admin"), createCard);
 
@@ -51,8 +73,8 @@ router.post("/", auth, permit("admin"), createCard);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -67,11 +89,11 @@ router.post("/", auth, permit("admin"), createCard);
  *                 type: string
  *               description:
  *                 type: string
- *               image:
- *                 type: string
+ *               isActive:
+ *                 type: boolean
  *     responses:
  *       200:
- *         description: Card updated
+ *         description: Card updated successfully
  */
 router.put("/:id", auth, permit("admin"), updateCard);
 
@@ -84,14 +106,14 @@ router.put("/:id", auth, permit("admin"), updateCard);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - name: id
- *         in: path
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Card deleted
+ *         description: Card deleted successfully
  */
 router.delete("/:id", auth, permit("admin"), deleteCard);
 
