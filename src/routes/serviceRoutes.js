@@ -8,7 +8,7 @@ const {
   deleteService
 } = require("../controllers/serviceController");
 const { auth, permit } = require("../middleware/authMiddleware");
-
+const Card = require("../models/Card");
 const router = express.Router();
 
 /**
@@ -138,5 +138,29 @@ router.put("/:id", auth, permit("admin"), updateService);
  *         description: Service not found
  */
 router.delete("/:id", auth, permit("admin"), deleteService);
+
+
+/**
+ * @swagger
+ * /api/services/cards:
+ *   get:
+ *     summary: Get all service cards with full details
+ *     tags: [Services]
+ *     responses:
+ *       200:
+ *         description: List of service cards with complete information
+ */
+router.get("/cards", async (req, res) => {
+  try {
+    const serviceCards = await Card.find({ 
+      type: "service", 
+      isActive: true 
+    }).sort({ order: 1 });
+    res.json(serviceCards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 module.exports = router;

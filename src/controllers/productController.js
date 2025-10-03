@@ -8,27 +8,32 @@ const getProducts = async (req, res) => {
   try {
     const { category, featured, active } = req.query;
     
-    // Build filter
+    console.log("Query parameters:", { category, featured, active });
+    
+    // Build filter - temporarily remove isActive filter for debugging
     let filter = {};
     
-    // Filter by active status (default to true)
-    if (active !== 'false') {
-      filter.isActive = true;
+    // Only filter by active if explicitly requested
+    if (active === 'true' || active === 'false') {
+      filter.isActive = active === 'true';
     }
+    // If active is not specified, don't filter by it
     
-    // Filter by category if provided
     if (category) {
       filter.category = category;
     }
     
-    // Filter by featured if provided
     if (featured === 'true') {
       filter.isFeatured = true;
     }
     
+    console.log("Final filter:", filter);
+    
     const products = await Product.find(filter)
-      .sort({ order: 1, createdAt: -1 })
-      .select('-fullDescription'); // Exclude full description for list view
+      .sort({ order: 1, createdAt: -1 });
+
+    console.log("Products found:", products.length);
+    console.log("Products:", products);
 
     res.status(200).json({
       success: true,

@@ -36,7 +36,7 @@ app.use("/api/products", require("./routes/productRoutes"));
 app.use("/api/insights", require("./routes/insightRoutes"));
 app.use("/api/cards", require("./routes/cardRoutes"));
 app.use("/api/contacts", require("./routes/contactRoutes"));
-// app.use("/api/home", require("./routes/homeRoutes"));
+app.use("/api/home", require("./routes/homeRoutes"));
 
 // -------------------------
 // Root - Add link to Swagger docs
