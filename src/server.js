@@ -2,6 +2,9 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+const path = require("path");
 
 // Load environment variables
 dotenv.config();
@@ -20,12 +23,29 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ========== SWAGGER SETUP ==========
-const swaggerJsdoc = require("swagger-jsdoc");
-const swaggerUi = require("swagger-ui-express");
-const path = require("path");
+// ========== VERCEL-COMPATIBLE SWAGGER SETUP ==========
+const getServerUrl = () => {
+  if (process.env.NODE_ENV === "production") {
+    return process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}/api`
+      : "https://cms-m0p6hhgqo-kidus2s-projects.vercel.app/api";
+  }
+  return `http://localhost:${process.env.PORT || 5000}/api`;
+};
 
-// Swagger configuration
+// Dynamic API paths for different environments
+const getApiPaths = () => {
+  const paths = [
+    path.join(process.cwd(), 'src', 'routes', '*.js'),
+    path.join(process.cwd(), 'routes', '*.js'),
+    './src/routes/*.js',
+    './routes/*.js'
+  ];
+  
+  console.log('🔍 Looking for API files in:', paths);
+  return paths;
+};
+
 const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
@@ -40,10 +60,8 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: process.env.NODE_ENV === "production" 
-          ? `https://${process.env.VERCEL_URL}/api`
-          : `http://localhost:${process.env.PORT || 5000}/api`,
-        description: process.env.NODE_ENV === "production" ? "Production" : "Development"
+        url: getServerUrl(),
+        description: `${process.env.NODE_ENV} server`
       }
     ],
     components: {
@@ -56,27 +74,78 @@ const swaggerOptions = {
       },
     },
   },
-  apis: [path.join(__dirname, "routes", "*.js")], // Path to your route files
+  apis: getApiPaths(),
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+try {
+  const swaggerSpec = swaggerJsdoc(swaggerOptions);
+  
+  console.log('✅ Swagger spec generated successfully');
+  console.log('📊 Found paths:', Object.keys(swaggerSpec.paths || {}));
+  console.log('🌐 Server URL:', getServerUrl());
 
-// Serve Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "CMS API Documentation"
-}));
+  // Serve Swagger UI
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: "CMS API Documentation",
+    swaggerOptions: {
+      persistAuthorization: true,
+    }
+  }));
 
-// Alternative docs route
-app.get("/docs", (req, res) => {
-  res.redirect("/api-docs");
-});
+  // Alternative docs route
+  app.get("/docs", (req, res) => {
+    res.redirect("/api-docs");
+  });
 
-// Swagger JSON endpoint
-app.get("/api-docs.json", (req, res) => {
-  res.json(swaggerSpec);
-});
+  // Swagger JSON endpoint for debugging
+  app.get("/api-docs.json", (req, res) => {
+    res.json({
+      success: true,
+      paths: Object.keys(swaggerSpec.paths || {}),
+      components: Object.keys(swaggerSpec.components || {}),
+      serverUrl: getServerUrl(),
+      environment: process.env.NODE_ENV,
+      vercelUrl: process.env.VERCEL_URL
+    });
+  });
+
+} catch (error) {
+  console.error('❌ Swagger setup failed:', error);
+  
+  // Fallback route if Swagger fails
+  app.get("/api-docs", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>API Documentation - Swagger Not Available</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; }
+          .error { color: red; background: #fee; padding: 20px; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <h1>API Documentation</h1>
+        <div class="error">
+          <h3>Swagger documentation is currently unavailable</h3>
+          <p><strong>Error:</strong> ${error.message}</p>
+          <p>Check the server logs for more details.</p>
+        </div>
+        <p>Available API endpoints:</p>
+        <ul>
+          <li><a href="/api/users">/api/users</a></li>
+          <li><a href="/api/posts">/api/posts</a></li>
+          <li><a href="/api/products">/api/products</a></li>
+          <li><a href="/api/services">/api/services</a></li>
+          <li><a href="/api/contacts">/api/contacts</a></li>
+        </ul>
+      </body>
+      </html>
+    `);
+  });
+}
 
 // ========== ROUTES ==========
 app.use("/api/users", require("./routes/userRoutes"));
@@ -93,17 +162,18 @@ app.use("/api/home", require("./routes/homeRoutes"));
 // ========== MONGODB CONNECTION ==========
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ========== ROOT ROUTE ==========
 app.get("/", (req, res) => {
   res.json({ 
     message: "🚀 CMS API is running!",
-    cors: "CORS is enabled",
     environment: process.env.NODE_ENV,
+    vercelUrl: process.env.VERCEL_URL,
     documentation: "/api-docs",
-    health: "/health"
+    health: "/health",
+    apiBase: "/api"
   });
 });
 
@@ -112,7 +182,9 @@ app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    vercel: !!process.env.VERCEL,
+    vercelUrl: process.env.VERCEL_URL
   });
 });
 
@@ -120,14 +192,15 @@ app.get("/health", (req, res) => {
 app.use((req, res) => {
   res.status(404).json({ 
     message: "Route not found",
+    requestedUrl: req.url,
     availableRoutes: [
       "/api-docs",
-      "/health", 
+      "/docs", 
+      "/health",
       "/api/users",
       "/api/posts",
       "/api/products",
-      "/api/services",
-      "/api/contacts"
+      "/api/services"
     ]
   });
 });
@@ -137,11 +210,7 @@ const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
     console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-    console.log(`📋 Swagger JSON: http://localhost:${PORT}/api-docs.json`);
-    console.log(`🔗 Alternative: http://localhost:${PORT}/docs`);
-    console.log(`❤️ Health Check: http://localhost:${PORT}/health`);
   });
 }
 
