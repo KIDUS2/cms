@@ -12,22 +12,6 @@
       "dest": "/src/server.js"
     },
     {
-      "src": "/api-docs",
-      "dest": "/src/server.js"
-    },
-    {
-      "src": "/api-docs/(.*)",
-      "dest": "/src/server.js"
-    },
-    {
-      "src": "/docs",
-      "dest": "/src/server.js"
-    },
-    {
-      "src": "/health",
-      "dest": "/src/server.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "/src/server.js"
     }
