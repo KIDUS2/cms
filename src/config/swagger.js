@@ -1,6 +1,7 @@
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const path = require("path");
+const fs = require("fs");
 
 class Swagger {
   constructor(app) {
@@ -9,7 +10,6 @@ class Swagger {
     this.init();
   }
 
-  // Determine server URL based on environment
   getServerUrl() {
     if (process.env.NODE_ENV === "production") {
       return process.env.VERCEL_URL
@@ -19,29 +19,33 @@ class Swagger {
     return "http://localhost:5000/api";
   }
 
-  // Get correct API file paths for Swagger
   getApiPaths() {
-    return [
-      path.join(__dirname, "routes/*.js"),
-      path.join(process.cwd(), "src/routes/*.js"),
-      "./src/routes/*.js",
-    ];
+    const routesPath = path.join(process.cwd(), 'src', 'routes', '*.js');
+    console.log('📁 Looking for route files in:', routesPath);
+    
+    // Check if the path exists
+    if (fs.existsSync(path.dirname(routesPath))) {
+      console.log('✅ Routes directory exists');
+    } else {
+      console.log('❌ Routes directory not found');
+    }
+    
+    return [routesPath];
   }
 
-  // Initialize Swagger
   init() {
     const options = {
       definition: {
         openapi: "3.0.0",
         info: {
-          title: "CMS API",
+          title: "Upeosoft CMS API",
           version: "1.0.0",
-          description: "API documentation for the CMS project",
+          description: "Professional API documentation for Upeosoft CMS",
         },
         servers: [
           {
             url: this.getServerUrl(),
-            description: process.env.NODE_ENV === "production" ? "Production server" : "Development server"
+            description: process.env.NODE_ENV
           },
         ],
         components: {
@@ -57,33 +61,35 @@ class Swagger {
       apis: this.getApiPaths(),
     };
 
-     try {
+    try {
       const specs = swaggerJsdoc(options);
       
-      // Swagger UI options
+      console.log("✅ Swagger spec generated");
+      console.log("📊 Paths found:", Object.keys(specs.paths || {}));
+
+      // Professional Swagger UI configuration
       const swaggerOptions = {
         explorer: true,
         customCss: `
           .swagger-ui .topbar { display: none }
           .swagger-ui .info .title { color: #2563eb }
-          .swagger-ui .btn.authorize { background-color: #2563eb }
         `,
-        customSiteTitle: "Upeosoft CMS API Documentation",
+        customSiteTitle: "Upeosoft CMS API",
         swaggerOptions: {
           persistAuthorization: true,
-          docExpansion: "none",
+          docExpansion: "list",
           filter: true,
+          displayRequestDuration: true,
         },
       };
 
       // Serve Swagger UI
       this.app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
-      
-      console.log("✅ Swagger UI available at /api-docs");
-      console.log(`📚 Documentation: http://localhost:${process.env.PORT || 5000}/api-docs`);
+
+      console.log("✅ Swagger UI mounted at /api-docs");
       
     } catch (error) {
-      console.error("❌ Swagger initialization error:", error);
+      console.error("❌ Swagger error:", error);
     }
   }
 }

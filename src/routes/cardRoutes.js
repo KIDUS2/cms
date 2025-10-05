@@ -18,7 +18,7 @@ const Card = require("../models/Card");
  *           description: The auto-generated ID of the card
  *         type:
  *           type: string
- *           enum: [about, service, product, insight, team]
+ *           enum: [about, service, product, insight, team, home]
  *           description: The category of the card
  *         title:
  *           type: string
@@ -63,6 +63,10 @@ const Card = require("../models/Card");
  *           items:
  *             type: string
  *           description: Additional tags for filtering
+ *         section:
+ *           type: string
+ *           enum: [hero, features, stats, testimonials, cta]
+ *           description: Home page section for home type cards
  *       example:
  *         type: "service"
  *         title: "Mobile App Development"
@@ -117,7 +121,7 @@ router.post("/", async (req, res) => {
  *         name: type
  *         schema:
  *           type: string
- *           enum: [about, service, product, insight, team]
+ *           enum: [about, service, product, insight, team, home]
  *         description: Filter cards by type
  *       - in: query
  *         name: isActive
@@ -129,21 +133,177 @@ router.post("/", async (req, res) => {
  *         schema:
  *           type: string
  *         description: Filter by tags (comma separated)
+ *       - in: query
+ *         name: section
+ *         schema:
+ *           type: string
+ *           enum: [hero, features, stats, testimonials, cta]
+ *         description: Filter home cards by section
  *     responses:
  *       200:
  *         description: List of cards
  */
 router.get("/", async (req, res) => {
   try {
-    const { type, isActive, tags } = req.query;
+    const { type, isActive, tags, section } = req.query;
     const filter = {};
     
     if (type) filter.type = type;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     if (tags) filter.tags = { $in: tags.split(',') };
+    if (section) filter.section = section;
     
     const cards = await Card.find(filter).sort({ order: 1, createdAt: -1 });
     res.json(cards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/cards/home:
+ *   get:
+ *     summary: Get all active home page cards
+ *     tags: [Cards]
+ *     parameters:
+ *       - in: query
+ *         name: section
+ *         schema:
+ *           type: string
+ *           enum: [hero, features, stats, testimonials, cta]
+ *         description: Filter by home page section
+ *     responses:
+ *       200:
+ *         description: List of home page cards
+ */
+router.get("/home", async (req, res) => {
+  try {
+    const { section } = req.query;
+    const filter = { 
+      type: "home", 
+      isActive: true 
+    };
+    
+    if (section) filter.section = section;
+    
+    const homeCards = await Card.find(filter).sort({ order: 1 });
+    res.json(homeCards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/cards/home/hero:
+ *   get:
+ *     summary: Get hero section cards for home page
+ *     tags: [Cards]
+ *     responses:
+ *       200:
+ *         description: List of hero section cards
+ */
+router.get("/home/hero", async (req, res) => {
+  try {
+    const heroCards = await Card.find({ 
+      type: "home", 
+      section: "hero",
+      isActive: true 
+    }).sort({ order: 1 });
+    res.json(heroCards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/cards/home/features:
+ *   get:
+ *     summary: Get features section cards for home page
+ *     tags: [Cards]
+ *     responses:
+ *       200:
+ *         description: List of features section cards
+ */
+router.get("/home/features", async (req, res) => {
+  try {
+    const featureCards = await Card.find({ 
+      type: "home", 
+      section: "features",
+      isActive: true 
+    }).sort({ order: 1 });
+    res.json(featureCards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/cards/home/stats:
+ *   get:
+ *     summary: Get stats section cards for home page
+ *     tags: [Cards]
+ *     responses:
+ *       200:
+ *         description: List of stats section cards
+ */
+router.get("/home/stats", async (req, res) => {
+  try {
+    const statsCards = await Card.find({ 
+      type: "home", 
+      section: "stats",
+      isActive: true 
+    }).sort({ order: 1 });
+    res.json(statsCards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/cards/home/testimonials:
+ *   get:
+ *     summary: Get testimonials section cards for home page
+ *     tags: [Cards]
+ *     responses:
+ *       200:
+ *         description: List of testimonials section cards
+ */
+router.get("/home/testimonials", async (req, res) => {
+  try {
+    const testimonialCards = await Card.find({ 
+      type: "home", 
+      section: "testimonials",
+      isActive: true 
+    }).sort({ order: 1 });
+    res.json(testimonialCards);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/cards/home/cta:
+ *   get:
+ *     summary: Get call-to-action section cards for home page
+ *     tags: [Cards]
+ *     responses:
+ *       200:
+ *         description: List of CTA section cards
+ */
+router.get("/home/cta", async (req, res) => {
+  try {
+    const ctaCards = await Card.find({ 
+      type: "home", 
+      section: "cta",
+      isActive: true 
+    }).sort({ order: 1 });
+    res.json(ctaCards);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -222,7 +382,6 @@ router.get("/type/:type", async (req, res) => {
   }
 });
 
-// Keep the other routes (get by ID, update, delete) the same as before
 /**
  * @swagger
  * /api/cards/{id}:
