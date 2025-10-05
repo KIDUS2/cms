@@ -10,9 +10,9 @@ class Swagger {
 
   getServerUrl() {
     if (process.env.NODE_ENV === "production") {
-      return `https://cms-m0p6hhgqo-kidus2s-projects.vercel.app/api`;
+      return `https://cms-m0p6hhgqo-kidus2s-projects.vercel.app`;
     }
-    return `http://localhost:${process.env.PORT || 5000}/api`;
+    return `http://localhost:${process.env.PORT || 5000}`;
   }
 
   getApiPaths() {
