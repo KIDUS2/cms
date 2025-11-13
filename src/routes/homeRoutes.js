@@ -2,6 +2,7 @@ const express = require("express");
 const {
   getHomeData,
   getFeaturedData,
+  getHomepageStats,
   getHomeStats
 } = require("../controllers/homeController");
 
@@ -77,6 +78,6 @@ router.get("/featured", getFeaturedData);
  *       200:
  *         description: Statistics retrieved successfully
  */
-router.get("/stats", getHomeStats);
+router.get("/stats", getHomepageStats);
 
 module.exports = router;

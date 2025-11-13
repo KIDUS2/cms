@@ -3,6 +3,21 @@ const Service = require("../models/Service"); // If you have services
 const Insight = require("../models/Insight"); // If you have insights/blog
 const Card = require("../models/Card");
 const Contact = require("../models/Contact");
+const Testimonial = require("../models/Testimonial");
+const Partner = require("../models/Partner");
+const Hero = require("../models/Hero");
+const HomeService = require("../models/HomeService");
+// @desc    Get homepage data
+// @route   GET /api/home
+// @access  Public
+// controllers/homeController.js
+// const Product = require("../models/Product");
+// const Insight = require("../models/Insight");
+// const Card = require("../models/Card");
+// const Testimonial = require("../models/Testimonial");
+// const Partner = require("../models/Partner");
+// const Hero = require("../models/Hero");
+// const HomeService = require("../models/HomeService");
 
 // @desc    Get homepage data
 // @route   GET /api/home
@@ -11,13 +26,30 @@ const getHomeData = async (req, res) => {
   try {
     // Fetch data from multiple collections in parallel
     const [
+      heroData,
+      homeServices,
       featuredProducts,
-      featuredServices,
       recentInsights,
       aboutCards,
-      serviceCards,
+      testimonials,
+      partners,
       stats
     ] = await Promise.all([
+      // Hero section data
+      Hero.findOne({
+        isActive: true
+      })
+      .sort({ order: 1 })
+      .select('title subtitle description backgroundImage primaryButton secondaryButton'),
+
+      // Home services specifically for home page
+      HomeService.find({
+        isActive: true
+      })
+      .sort({ order: 1 })
+      .limit(6)
+      .select('title description shortDescription subtitle icon features buttonText buttonLink'),
+
       // Featured products (limit to 4)
       Product.find({ 
         isFeatured: true, 
@@ -26,16 +58,6 @@ const getHomeData = async (req, res) => {
       .sort({ order: 1, createdAt: -1 })
       .limit(4)
       .select('name slug description image category features'),
-
-      // Featured services (limit to 6)
-      Card.find({
-        type: 'service',
-        isActive: true,
-        isFeatured: true
-      })
-      .sort({ order: 1 })
-      .limit(6)
-      .select('title description shortDescription icon features buttonText buttonLink'),
 
       // Recent insights/blog posts (limit to 3)
       Insight.find({ 
@@ -55,57 +77,117 @@ const getHomeData = async (req, res) => {
       .limit(4)
       .select('title description shortDescription icon features'),
 
-      // Service cards for services section
-      Card.find({
-        type: 'service',
+      // Testimonials
+      Testimonial.find({
+        isActive: true,
+        isFeatured: true
+      })
+      .sort({ order: 1, createdAt: -1 })
+      .limit(5)
+      .select('clientName position company content rating image'),
+
+      // Partners
+      Partner.find({
         isActive: true
       })
-      .sort({ order: 1 })
+      .sort({ order: 1, createdAt: 1 })
       .limit(8)
-      .select('title description shortDescription icon features buttonText buttonLink order'),
+      .select('name description logo website'),
 
       // Get some stats (optional)
       getHomepageStats()
     ]);
 
+    // Default hero data in case no hero is found in database
+    const defaultHero = {
+      title: "Welcome to Our Platform",
+      subtitle: "Building amazing digital experiences",
+      description: "We create innovative solutions that drive business growth and deliver exceptional user experiences.",
+      primaryButton: {
+        text: "Get Started",
+        link: "/contact"
+      },
+      secondaryButton: {
+        text: "View Our Work",
+        link: "/portfolio"
+      }
+    };
+
     res.status(200).json({
       success: true,
       message: "Homepage data retrieved successfully",
       data: {
-        hero: {
-          title: "Welcome to Our Platform",
-          subtitle: "Building amazing digital experiences",
-          description: "We create innovative solutions that drive business growth and deliver exceptional user experiences.",
-          primaryButton: {
-            text: "Get Started",
-            link: "/contact"
+        // Hero section from database or default
+        hero: heroData || defaultHero,
+        
+        // Services We Provide Section - Using HomeService model
+        services: {
+          title: "Services provide for you",
+          subtitle: "Next Core Technologies is a leading provider of enterprise solutions, empowering businesses with innovative software that drives growth and efficiency.",
+          description: "Our core service is delivering cutting-edge technology solutions tailored to your business needs.",
+          learnMore: {
+            text: "Learn More",
+            link: "/services"
           },
-          secondaryButton: {
-            text: "View Our Work",
-            link: "/portfolio"
-          }
+          items: homeServices.map(service => ({
+            id: service._id,
+            title: service.title,
+            description: service.description,
+            shortDescription: service.shortDescription,
+            subtitle: service.subtitle,
+            icon: service.icon,
+            features: service.features || [],
+            buttonText: service.buttonText || "Learn More",
+            buttonLink: service.buttonLink || "/services"
+          }))
         },
+
+        // Partners Section
+        partners: {
+          title: "Our Partner Companies",
+          subtitle: "Trusted by industry leaders",
+          items: partners.map(partner => ({
+            id: partner._id,
+            name: partner.name,
+            description: partner.description,
+            logo: partner.logo,
+            website: partner.website
+          }))
+        },
+
+        // Testimonials Section
+        testimonials: {
+          title: "What People Say",
+          subtitle: "Hear from our satisfied clients",
+          items: testimonials.map(testimonial => ({
+            id: testimonial._id,
+            clientName: testimonial.clientName,
+            position: testimonial.position,
+            company: testimonial.company,
+            content: testimonial.content,
+            rating: testimonial.rating,
+            image: testimonial.image
+          }))
+        },
+
         featuredProducts: {
           title: "Featured Products",
           subtitle: "Check out our latest creations",
           items: featuredProducts
         },
-        services: {
-          title: "Our Services",
-          subtitle: "What we can do for you",
-          items: featuredServices,
-          allServices: serviceCards
-        },
+
         about: {
           title: "About Us",
           subtitle: "Why choose our platform",
           items: aboutCards
         },
+
         insights: {
           title: "Latest Insights",
           subtitle: "News and updates from our blog",
           items: recentInsights
         },
+
         stats: stats,
         cta: {
           title: "Ready to Start Your Project?",
@@ -129,17 +211,21 @@ const getHomeData = async (req, res) => {
 // Helper function to get homepage stats
 const getHomepageStats = async () => {
   try {
-    const [productsCount, servicesCount, insightsCount] = await Promise.all([
+    const [productsCount, homeServicesCount, insightsCount, testimonialsCount, partnersCount] = await Promise.all([
       Product.countDocuments({ isActive: true }),
-      Card.countDocuments({ type: 'service', isActive: true }),
-      Insight.countDocuments({ status: 'published', isActive: true })
+      HomeService.countDocuments({ isActive: true }),
+      Insight.countDocuments({ status: 'published', isActive: true }),
+      Testimonial.countDocuments({ isActive: true }),
+      Partner.countDocuments({ isActive: true })
     ]);
 
     return {
       projects: productsCount,
-      services: servicesCount,
+      services: homeServicesCount,
       blogPosts: insightsCount,
-      happyClients: 50 // You can make this dynamic if you have a clients collection
+      testimonials: testimonialsCount,
+      partners: partnersCount,
+      happyClients: 50
     };
   } catch (error) {
     console.error("Error getting stats:", error);
@@ -147,55 +233,21 @@ const getHomepageStats = async () => {
       projects: 0,
       services: 0,
       blogPosts: 0,
+      testimonials: 0,
+      partners: 0,
       happyClients: 0
     };
   }
 };
-
-// @desc    Get homepage featured sections only
-// @route   GET /api/home/featured
-// @access  Public
 const getFeaturedData = async (req, res) => {
   try {
-    const [products, services, insights] = await Promise.all([
-      Product.find({ 
-        isFeatured: true, 
-        isActive: true 
-      })
-      .sort({ order: 1 })
-      .limit(3)
-      .select('name slug description image category'),
-
-      Card.find({
-        type: 'service',
-        isActive: true,
-        isFeatured: true
-      })
-      .sort({ order: 1 })
-      .limit(3)
-      .select('title description icon buttonText buttonLink'),
-
-      Insight.find({ 
-        status: 'published',
-        isActive: true,
-        isFeatured: true 
-      })
-      .sort({ publishedAt: -1 })
-      .limit(3)
-      .select('title slug excerpt image publishedAt')
-    ]);
-
     res.status(200).json({
       success: true,
       data: {
-        featuredProducts: products,
-        featuredServices: services,
-        featuredInsights: insights
+        message: "Featured data endpoint"
       }
     });
-
   } catch (error) {
-    console.error("Get featured data error:", error);
     res.status(500).json({
       success: false,
       message: "Error fetching featured data"
@@ -203,28 +255,8 @@ const getFeaturedData = async (req, res) => {
   }
 };
 
-// @desc    Get homepage stats only
-// @route   GET /api/home/stats
-// @access  Public
-const getHomeStats = async (req, res) => {
-  try {
-    const stats = await getHomepageStats();
-    
-    res.status(200).json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error("Get home stats error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching homepage statistics"
-    });
-  }
-};
-
 module.exports = {
   getHomeData,
   getFeaturedData,
-  getHomeStats
+  getHomepageStats
 };
